@@ -17,6 +17,7 @@ use InvalidArgumentException;
 use Twig\Environment;
 use Twig\Error\Error;
 use Twig\Loader\LoaderInterface;
+use TwigBridge\Twig\Normalizer;
 
 /**
  * Bridge functions between Laravel & Twig
@@ -33,10 +34,20 @@ class Bridge extends Environment
      */
     protected $app;
 
+     /**
+     * @var array
+     */
+    private $extensionAliases = [];
+
+        /**
+     * @var Normalizer
+     */
+    protected $normalizer;
+
     /**
      * {@inheritdoc}
      */
-    public function __construct(LoaderInterface $loader, $options = [], Container $app = null)
+    public function __construct(Normalizer $normalizer, LoaderInterface $loader, $options = [], Container $app = null)
     {
         // Twig 2.0 doesn't support `true` anymore
         if (isset($options['autoescape']) && $options['autoescape'] === true) {
@@ -45,6 +56,7 @@ class Bridge extends Environment
 
         parent::__construct($loader, $options);
 
+        $this->normalizer = $normalizer;
         $this->app = $app;
     }
 
@@ -132,12 +144,7 @@ class Bridge extends Environment
      */
     protected function normalizeName($name)
     {
-        $extension = '.' . $this->app['twig.extension'];
-        $length = strlen($extension);
-
-        if (substr($name, -$length, $length) === $extension) {
-            $name = substr($name, 0, -$length);
-        }
+        $name = $this->normalizer->normalizeName($name);
 
         // Normalize namespace and delimiters
         $delimiter = ViewFinderInterface::HINT_PATH_DELIMITER;
@@ -148,5 +155,28 @@ class Bridge extends Environment
         list($namespace, $name) = explode($delimiter, $name);
 
         return $namespace.$delimiter.str_replace('/', '.', $name);
+    }
+    
+    /**
+     * @param $extensionName
+     * @param $aliasName
+     * @return $this
+     */
+    public function addExtensionAlias($extensionName, $aliasName)
+    {
+        $this->extensionAliases[$aliasName] = $extensionName;
+        return $this;
+    }
+
+    /**
+     * @param string $class
+     * @return \Twig_ExtensionInterface
+     */
+    public function getExtension($class)
+    {
+        if(!empty($this->extensionAliases[$class])) {
+            $class = $this->extensionAliases[$class];
+        }
+        return parent::getExtension($class);
     }
 }

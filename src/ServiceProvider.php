@@ -97,13 +97,15 @@ class ServiceProvider extends ViewServiceProvider
      */
     protected function registerExtension()
     {
-        $this->app['view']->addExtension(
-            $this->app['twig.extension'],
-            'twig',
-            function () {
-                return $this->app['twig.engine'];
-            }
-        );
+        foreach ($this->app['twig.extension'] as $extension) {
+            $this->app['view']->addExtension(
+                $extension,
+                'twig',
+                function () {
+                    return $this->app['twig.engine'];
+                }
+            );
+        }
     }
 
     /**
@@ -140,7 +142,11 @@ class ServiceProvider extends ViewServiceProvider
     protected function registerOptions()
     {
         $this->app->bindIf('twig.extension', function () {
-            return $this->app['config']->get('twigbridge.twig.extension');
+            return (array)$this->app['config']->get('twigbridge.twig.extension');
+        });
+
+        $this->app->bindIf('twig.normalizer', function () {
+            return new Twig\Normalizer($this->app['twig.extension']);
         });
 
         $this->app->bindIf('twig.options', function () {
@@ -269,6 +275,7 @@ class ServiceProvider extends ViewServiceProvider
 
         $this->app->bindIf('twig.engine', function () {
             return new Engine\Twig(
+                $this->app['twig.normalizer'],
                 $this->app['twig.compiler'],
                 $this->app['twig.loader.viewfinder'],
                 $this->app['config']->get('twigbridge.twig.globals', [])
