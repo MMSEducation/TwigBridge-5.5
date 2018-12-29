@@ -201,7 +201,7 @@ class ServiceProvider extends ViewServiceProvider
             return new Twig\Loader(
                 $this->app['files'],
                 $this->app['view']->getFinder(),
-                $this->app['twig.extension']
+                $this->app['twig.normalizer']
             );
         });
 
@@ -230,6 +230,7 @@ class ServiceProvider extends ViewServiceProvider
                 $extensions = $this->app['twig.extensions'];
                 $lexer      = $this->app['twig.lexer'];
                 $twig       = new Bridge(
+                    $this->app['twig.normalizer'],
                     $this->app['twig.loader'],
                     $this->app['twig.options'],
                     $this->app
@@ -275,7 +276,6 @@ class ServiceProvider extends ViewServiceProvider
 
         $this->app->bindIf('twig.engine', function () {
             return new Engine\Twig(
-                $this->app['twig.normalizer'],
                 $this->app['twig.compiler'],
                 $this->app['twig.loader.viewfinder'],
                 $this->app['config']->get('twigbridge.twig.globals', [])
